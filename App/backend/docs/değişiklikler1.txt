@@ -1,0 +1,39 @@
+Mahalle-Connect Veritabanı ve Mimari Optimizasyon Raporu
+-------------------------------------------------------
+
+Bu doküman, projede orijinal UML tasarımından yola çıkılarak uygulanan profesyonel mimari değişiklikleri, bunların nedenlerini ve projeye kattığı değerleri (sonuçları) listelemek amacıyla hazırlanmıştır.
+
+1. DATA RETENTION STRATEGY (Veri Yaşam Döngüsü & Şişme Önlemi)
+- Değişiklik: EVENTS tablosuna `status` (active, archived, deleted) alanı eklendi.
+- Sebep: Hocanın belirttiği gibi; web scraper (kazıyıcı) sürekli internetten veri çeker. Zamanı geçen etkinlikler veritabanında yıllarca tutulursa, özellikle harita (PostGIS) veritabanı aşırı şişer (bloat), sorgular yavaşlar ve sunucu maliyeti artar.
+- Sonuç: Bitiş tarihi geçen etkinlikler 24 saat sonra haritadan gizlenerek "archived" (arşiv) statüsüne geçer (sadece yapay zeka/öneri modeli için saklanır). 1 ay dolduğunda ise veritabanından kalıcı olarak (hard-delete) silinir. Bu sayede veritabanı her zaman optimize ve hafif kalır.
+
+2. PASSWORD RATE LIMITING (Siber Güvenlik & Churn Önleme)
+- Değişiklik: USERS tablosuna `last_password_change` zaman damgası eklendi.
+- Sebep: Kullanıcıların şifrelerini sürekli ve sınırsız sayıda değiştirmesi hem veritabanını yorar (churn) hem de güvenlik riskleri oluşturur. Hocanın uyarısı doğrultusunda bu hız sınırlandırıldı.
+- Sonuç: Kullanıcı bir şifre değiştirdiğinde bu tarih kaydedilir. En az 6 saat geçmeden tekrar şifre değiştirmesine sistem (backend) izin vermez. Güvenlik ve performans artırıldı.
+
+3. KUSURSUZ HARİTA ENTEGRASYONU (Geocoding Pipeline)
+- Değişiklik: EVENTS tablosuna, orijinal adresi düz metin olarak tutacak `location_name` VARCHAR alanı eklendi.
+- Sebep: Scraper web sitelerinden yalnızca "Şişhane Kuluçka Merkezi" gibi metin adresleri çekebilir. PostGIS tabanlı bir uygulamanın yarıçaplı çevresel arama (ST_DWithin) veya harita pin'i gösterebilmesi için metne değil Koordinata (Enlem/Boylam) ihtiyacı vardır.
+- Sonuç: Sistem, scraper ile çektiği "Şişhane Kuluçka" metnini Geocoding API (Google Maps veya Nominatim) kullanarak tam koordinatlara (Point) çevirecek ve PostGIS `location` alanına öyle yazacaktır. Bu sayede görseldeki gibi haritada net pinler oluşturulacaktır.
+
+4. SCRAPER IDEMPOTENCY (Veri Duplikasyonunu Engelleme)
+- Değişiklik: EVENTS tablosunda `source_id` ve `event_url` kombinasyonuna UNIQUE constraint eklendi.
+- Sebep: Scraper (Backgroundworker) günde 1 veya 2 kez çalışıp X sitesine bağlandığında, oradaki etkinlikleri dün zaten kaydetmiş olabilir. Unique kuralı konulmazsa, veritabanı aynı "Jazz Konseri"ni defalarca yeni etkinlikmiş gibi kaydeder (veri çöplüğü oluşur).
+- Sonuç: Postgres üzerinde `ON CONFLICT DO UPDATE` (Upsert) komutu kullanılacak. Yani; scraper aynı linke sahip bir etkinliği tekrar görürse yeni satır açmak yerine sadece mevcut kaydın değişen yerlerini (örneğin saati değiştiyse) günceller.
+
+5. FULL-TEXT SEARCH (Google-Vari Arama Hızı)
+- Değişiklik: EVENTS tablosuna `search_vector` isimli TSVECTOR alanı ve GIN (Generalized Inverted Index) eklendi.
+- Sebep: Klasik SQL araması (`LIKE '%Yapay Zeka%'`), "Yapay Zeka" kelimesini ararken tüm veritabanını satır satır okur (Full Table Scan). Etkinlik sayısı 10.000'i geçtiğinde sistem çöker.
+- Sonuç: PostgeSQL yerleşik arama motoru özelliği (TSVECTOR) kullanılarak, etkinlik başlığı ve açıklaması üzerinden profesyonel endekslenmiş metin araması yapılacak. Aramalar milisaniyeler içinde sonuç dönecek.
+
+6. USER INTERACTION HISTORY (AI Recommendation İçin Veri Toplama)
+- Değişiklik: `user_event_interactions` adında yepyeni bir takip tablosu eklendi.
+- Sebep: UML Sequence diagramda Recommendation Service'in kullanıcı geçmişini okuduğu görülüyor ancak veritabanında geçmişi tutan tablo tasarlanmamış. 
+- Sonuç: Kullanıcının bir etkinliğe sadece detay bakması (view), tıklaması (click) veya katılacağım demesi (rsvp) bu tabloda toplanacak. Recommendation algoritmamız çok hassas profiller oluşturabilecek.
+
+7. NORMALIZATION & ADMIN ROLE
+- Değişiklik: Orijinal diyagramdaki String source alanı UUID (yabancı anahtar) ile normalized edildi. Aynı zamanda ayrı bir "Admin" tablosu oluşturmak yerine USERS tablosuna `role` alanı koyuldu.
+- Sebep: Kaynak isminin "Meetup" olarak her etkinliğe string yazılması tipografik hatalara ve alan israfına yol açar. Ayrı admin tablosu ise Auth (Giriş yapma) sistemini aşırı karmaşıklaştırır (iki tabloyu aynı anda JWT token üretmek için sorgulamak gerekir).
+- Sonuç: Sürdürülebilir, modern, temiz kod temelli bir veritabanı yapısı kuruldu.
