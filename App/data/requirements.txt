@@ -1,0 +1,5 @@
+scrapy
+spacy
+sqlalchemy
+psycopg2-binary
+python-dotenv
