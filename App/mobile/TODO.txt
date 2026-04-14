@@ -1,0 +1,19 @@
+========================================
+  MAHALLE-CONNECT MOBILE – YAPILACAKLAR
+========================================
+
+[  ] Google Maps Entegrasyonu
+    - MapView ekranındaki mock harita (gradient + grid) yerine gerçek Google Maps entegre edilecek
+    - google_maps_flutter paketi eklenecek
+    - Android: google-services.json + API key (AndroidManifest.xml)
+    - iOS: GoogleService-Info.plist + API key (AppDelegate.swift)
+    - Gerçek marker'lar, kullanıcı konumu, ve radius circle gösterilecek
+    - Etkinlik koordinatları (lat/lng) mock datada zaten mevcut
+
+[  ] Backend API Entegrasyonu
+    - Mock data yerine backend API'den veri çekilecek
+    - Auth sistemi bağlanacak
+
+[  ] Push Notification Desteği
+
+[  ] Gerçek Cihaz Testleri
