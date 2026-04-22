@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from backend.app.database import DATABASE_URL, Base
-from backend.app import models  # Import models to register them
+from database import DATABASE_URL, Base
+import models  # Import models to register them
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -28,6 +28,19 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def include_object(object, name, type_, reflected, compare_to):
+    if type_ == "table":
+        # Alembic will only track and modify tables that exist in our models.py.
+        # This safely ignores PostGIS/Tiger tables that are pre-installed in the DB.
+        # Note: If you delete a table from models.py in the future, Alembic won't auto-drop it.
+        # You will need to manually write `op.drop_table("...")` in the migration file.
+        return name in target_metadata.tables
+
+    # Ignore duplicate spatial indexes generated implicitly by GeoAlchemy
+    if type_ == "index" and name in {"idx_users_location", "idx_events_location", "idx_user_location", "idx_event_location"}:
+        return False
+
+    return True
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -46,6 +59,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -53,7 +67,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(connection=connection, target_metadata=target_metadata, include_object=include_object)
 
     with context.begin_transaction():
         context.run_migrations()
