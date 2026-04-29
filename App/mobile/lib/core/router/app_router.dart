@@ -7,6 +7,7 @@ import '../../screens/ai_picks_screen.dart';
 import '../../screens/interest_profile_screen.dart';
 import '../../screens/event_detail_screen.dart';
 import '../../screens/create_event_screen.dart';
+import '../../screens/notifications_screen.dart';
 import '../../screens/not_found_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -29,6 +30,11 @@ final GoRouter appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: '/create-event',
       builder: (context, state) => const CreateEventScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
     ),
     // Shell with bottom nav
     ShellRoute(

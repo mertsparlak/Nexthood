@@ -79,3 +79,68 @@ class TokenData(BaseModel):
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str
+
+# --- Browsing Log Schemas ---
+class BrowsingLogCreate(BaseModel):
+    event_id: UUID
+    action: str  # 'click_card', 'click_detail', 'click_map_marker'
+    event_category: str
+    event_location_name: Optional[str] = None
+    source_screen: Optional[str] = None
+
+class BrowsingLogBatch(BaseModel):
+    """Toplu log gönderimi için (mobil buffer)"""
+    logs: List[BrowsingLogCreate]
+
+class BrowsingLogResponse(BaseModel):
+    id: UUID
+    event_id: UUID
+    action: str
+    event_category: str
+    event_location_name: Optional[str]
+    source_screen: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Notification Schemas ---
+class NotificationResponse(BaseModel):
+    id: UUID
+    title: str
+    body: str
+    notification_type: str
+    related_category: Optional[str]
+    related_district: Optional[str]
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Analytics Schemas ---
+class CategoryInterest(BaseModel):
+    category: str
+    view_count: int
+    unique_events: int
+    interest_score: float
+
+class DistrictCategoryTrend(BaseModel):
+    district: str
+    category: str
+    total_views: int
+    unique_viewers: int
+    trend_score: float
+
+class UserInsight(BaseModel):
+    top_categories: List[CategoryInterest]
+    total_events_viewed: int
+    most_active_screen: Optional[str]
+
+class MunicipalityReport(BaseModel):
+    district: str
+    period: str
+    top_categories: List[DistrictCategoryTrend]
+    total_event_views: int
+    total_unique_users: int
+

@@ -6,6 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../data/mock_data.dart';
 import '../data/models/event.dart';
+import '../services/browsing_log_service.dart';
 
 const _categoryIcons = <String, IconData>{
   'music': LucideIcons.music,
@@ -232,7 +233,14 @@ class _MapViewScreenState extends State<MapViewScreen> {
               left: pos.dx * MediaQuery.of(context).size.width - 24,
               top: pos.dy * 400 - 24,
               child: GestureDetector(
-                onTap: () => context.push('/event/${event.id}'),
+                onTap: () {
+                  BrowsingLogService().logMapMarkerClick(
+                    eventId: event.id,
+                    category: event.category,
+                    locationName: event.location,
+                  );
+                  context.push('/event/${event.id}');
+                },
                 child: Container(
                   width: 48,
                   height: 48,
@@ -295,7 +303,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
-        onTap: () => context.push('/event/${event.id}'),
+        onTap: () {
+          BrowsingLogService().logCardClick(
+            eventId: event.id,
+            category: event.category,
+            locationName: event.location,
+            sourceScreen: 'map_view',
+          );
+          context.push('/event/${event.id}');
+        },
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(

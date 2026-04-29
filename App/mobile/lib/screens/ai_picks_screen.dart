@@ -7,6 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../data/mock_data.dart';
 import '../data/models/event.dart';
+import '../services/browsing_log_service.dart';
 
 class AIPicksScreen extends StatelessWidget {
   const AIPicksScreen({super.key});
@@ -190,7 +191,15 @@ class AIPicksScreen extends StatelessWidget {
 
   Widget _buildTopPickCard(BuildContext context, Event event, int index) {
     return GestureDetector(
-      onTap: () => context.push('/event/${event.id}'),
+      onTap: () {
+        BrowsingLogService().logCardClick(
+          eventId: event.id,
+          category: event.category,
+          locationName: event.location,
+          sourceScreen: 'ai_picks',
+        );
+        context.push('/event/${event.id}');
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white.withValues(alpha: 0.8),
@@ -303,7 +312,15 @@ class AIPicksScreen extends StatelessWidget {
 
   Widget _buildTrendingCard(BuildContext context, Event event) {
     return GestureDetector(
-      onTap: () => context.push('/event/${event.id}'),
+      onTap: () {
+        BrowsingLogService().logCardClick(
+          eventId: event.id,
+          category: event.category,
+          locationName: event.location,
+          sourceScreen: 'ai_picks',
+        );
+        context.push('/event/${event.id}');
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white.withValues(alpha: 0.8),

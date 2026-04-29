@@ -6,16 +6,37 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../data/mock_data.dart';
+import '../services/browsing_log_service.dart';
 
-class EventDetailScreen extends StatelessWidget {
+class EventDetailScreen extends StatefulWidget {
   final String eventId;
 
   const EventDetailScreen({super.key, required this.eventId});
 
   @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Etkinlik detayı açıldığında log kaydı oluştur
+    final event = mockEvents.firstWhere(
+      (e) => e.id == widget.eventId,
+      orElse: () => mockEvents.first,
+    );
+    BrowsingLogService().logDetailView(
+      eventId: event.id,
+      category: event.category,
+      locationName: event.location,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final event = mockEvents.firstWhere(
-      (e) => e.id == eventId,
+      (e) => e.id == widget.eventId,
       orElse: () => mockEvents.first,
     );
 

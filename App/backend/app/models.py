@@ -24,6 +24,8 @@ class User(Base):
     interests = relationship("UserInterest", back_populates="user", cascade="all, delete-orphan")
     recommendations = relationship("Recommendation", back_populates="user", cascade="all, delete-orphan")
     interactions = relationship("UserEventInteraction", back_populates="user", cascade="all, delete-orphan")
+    browsing_logs = relationship("EventBrowsingLog", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserInterest(Base):
@@ -82,6 +84,7 @@ class Event(Base):
     source = relationship("ScrapedSource", back_populates="events")
     recommendations = relationship("Recommendation", back_populates="event", cascade="all, delete-orphan")
     interactions = relationship("UserEventInteraction", back_populates="event", cascade="all, delete-orphan")
+    browsing_logs = relationship("EventBrowsingLog", back_populates="event", cascade="all, delete-orphan")
 
 
 class Recommendation(Base):
@@ -114,3 +117,73 @@ class UserEventInteraction(Base):
     # Relationships
     user = relationship("User", back_populates="interactions")
     event = relationship("Event", back_populates="interactions")
+
+
+class EventBrowsingLog(Base):
+    """Kullanıcıların etkinlik gezinme/tıklama logları.
+    Hangi kullanıcı hangi etkinliğe tıkladı, hangi ekrandan geldi bilgisini tutar.
+    Bu veriler üzerinden bölgesel/kategorik ilgi analizi yapılır.
+    """
+    __tablename__ = "event_browsing_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Gezinme detayları
+    action = Column(String, nullable=False)  # 'click_card', 'click_detail', 'click_map_marker'
+    event_category = Column(String, nullable=False, index=True)  # Denormalize — hızlı analitik sorgu
+    event_location_name = Column(String, nullable=True)  # Denormalize — konum adı
+
+    # Bağlam
+    source_screen = Column(String, nullable=True)  # 'discovery_feed', 'map_view', 'ai_picks', 'search'
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User", back_populates="browsing_logs")
+    event = relationship("Event", back_populates="browsing_logs")
+
+
+class Notification(Base):
+    """AI tarafından üretilen uygulama içi bildirimler.
+    Kullanıcının gezinme loglarına dayanarak kişiselleştirilmiş öneriler sunar.
+    Günde 1 kez üretilir.
+    """
+    __tablename__ = "notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    body = Column(TEXT, nullable=False)
+    notification_type = Column(String, nullable=False)  # 'event_suggestion', 'trend_alert', 'create_event_prompt'
+    related_category = Column(String, nullable=True)
+    related_district = Column(String, nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User", back_populates="notifications")
+
+
+class DistrictTrend(Base):
+    """Bölge bazlı etkinlik kategorisi trend verileri.
+    Belediye önerisi ve yönetim paneli için kullanılır.
+    Periyodik olarak (günlük/haftalık) hesaplanır.
+    """
+    __tablename__ = "district_trends"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    district = Column(String, nullable=False, index=True)
+    category = Column(String, nullable=False, index=True)
+    total_views = Column(Integer, default=0)
+    unique_viewers = Column(Integer, default=0)
+    trend_score = Column(Float, nullable=False)  # Hesaplanan popülerlik skoru
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('district', 'category', 'period_start', name='uix_district_category_period'),
+    )
+

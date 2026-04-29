@@ -6,6 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../data/mock_data.dart';
 import '../widgets/event_card.dart';
+import '../services/browsing_log_service.dart';
 
 class DiscoveryFeedScreen extends StatelessWidget {
   const DiscoveryFeedScreen({super.key});
@@ -68,7 +69,16 @@ class DiscoveryFeedScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: EventCard(
                     event: event,
-                    onTap: () => context.push('/event/${event.id}'),
+                    onTap: () {
+                      // Etkinlik kartına tıklandığında log kaydı oluştur
+                      BrowsingLogService().logCardClick(
+                        eventId: event.id,
+                        category: event.category,
+                        locationName: event.location,
+                        sourceScreen: 'discovery_feed',
+                      );
+                      context.push('/event/${event.id}');
+                    },
                   ).animate(delay: (index * 100).ms).fadeIn(duration: 400.ms).slideY(begin: 0.15, end: 0),
                 );
               },
@@ -109,21 +119,59 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title
-              ShaderMask(
-                shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                child: const Text(
-                  'Mahalle-Connect',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.white,
+              // Title Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShaderMask(
+                        shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
+                        child: const Text(
+                          'Mahalle-Connect',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'Discover local events',
+                        style: TextStyle(fontSize: 13, color: AppColors.gray600),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const Text(
-                'Discover local events',
-                style: TextStyle(fontSize: 13, color: AppColors.gray600),
+                  // Bildirim ikonu
+                  GestureDetector(
+                    onTap: () => context.push('/notifications'),
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.gray100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(LucideIcons.bell, size: 20, color: AppColors.gray700),
+                        ),
+                        Positioned(
+                          right: 4,
+                          top: 4,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primaryOrange,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               // Search Bar
